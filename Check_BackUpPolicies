@@ -1,0 +1,34 @@
+function SignIn(){
+    [System.Net.WebRequest]::DefaultWebProxy = New-Object System.Net.WebProxy('http://proxy:8080')
+    [System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+    [System.Net.WebRequest]::DefaultWebProxy.BypassProxyOnLocal = $true  
+
+    Connect-AzAccount
+}
+
+$context = Get-AzContext
+if(!($context)){
+    SignIn
+}
+
+#get array of VMs including their Recovery Services Vault 
+$objArray = @()
+$hash = $null
+$hash = @{}
+
+$VMs = get-azvm 
+$i = 0
+foreach ($VM in $VMs){
+    $i++
+    write-progress -Activity "Checking VMs" -status $vm.name -PercentComplete ($i/$vms.Count * 100)
+    $VmBackUpState = Get-AzRecoveryServicesBackupStatus -Name $VM.name -ResourceGroupName $vm.ResourceGroupName -Type "AzureVM"   
+    $obj = New-Object psobject -Property @{
+        VMname = $vm.Name
+        VaultId = $VmBackUpState.VaultId
+        BackedUp = $VmBackUpState.BackedUp
+    }
+    $objArray += $obj
+
+}
+
+$objArray
